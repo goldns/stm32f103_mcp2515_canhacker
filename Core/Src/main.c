@@ -5,14 +5,10 @@
   * @brief          : Main program body
   ******************************************************************************
   * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
+  * Author Andrei Sedakov / Kam / kam@goldns.ru
+	* CanHacker STM32F103C6T6 + MCP2515(via SPI)
+	* Tested on CANHacker V2.00.02
+  * First commit: 08.04.2022
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -81,7 +77,10 @@ uCAN_MSG rxMessage;
 // canhacker
 char V_version[]="V1010\r\n";
 char v_version[]="v0107\r\n";
-char R_N[]="\r\n";
+static const char CR2[] = "\r\n";
+static const char CR  = '\r';
+const char hex_asc_upper[] = "0123456789ABCDEF";
+
 
 void my_error() {
     int iiii=5;
@@ -105,13 +104,13 @@ void ParseRxUart() {
         HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
     }
     if(rx_uart_buffer[0]=='S') { // Speed select!
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)R_N,strlen(R_N));
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
     }
     if(rx_uart_buffer[0]=='O') { // Start Pkg
         if(CANSPI_Initialize() != true ) {
             my_error();
         }
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)R_N,strlen(R_N));
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
     }
 
 
@@ -128,7 +127,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if(huart->Instance == USART1) {
         rx_uart_current_size=Size;
         ParseRxUart();
-        //HAL_UART_Transmit_IT(&huart1,rx_uart_buffer,Size);
         HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
     }
 }
@@ -149,14 +147,8 @@ void my_init() {
     HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
 }
 
-static const uint16_t TIMESTAMP_LIMIT = 0xEA60;
-uint16_t GetTimeStamp() {
-    return HAL_GetTick() % TIMESTAMP_LIMIT;;
-}
 
 //// calc pkg
-const char hex_asc_upper[] = "0123456789ABCDEF";
-static const char CR  = '\r';
 static inline void put_hex_byte(char *buf, uint8_t byte) {
     buf[0] = hex_asc_upper_hi(byte);
     buf[1] = hex_asc_upper_lo(byte);
@@ -198,7 +190,7 @@ void SendPkgToUart() {
         }
     }
     if (_timestampEnabled) {
-        uint16_t ts = GetTimeStamp();
+        uint16_t ts = (HAL_GetTick() % 0xEA60);
         put_hex_byte(PkgBuff + offset, ts >> 8);
         offset += 2;
         put_hex_byte(PkgBuff + offset, ts);
