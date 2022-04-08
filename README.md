@@ -7,3 +7,16 @@ For Keil
 Часть  кода и логики спизжена с других проектов
 https://github.com/eziya/STM32_SPI_MCP2515
 https://github.com/autowp/arduino-canhacker
+
+
+
+ *  PINouts:
+ *  BOARD | MCP2515
+ *  +3.3v = VCC      (via 5v = bug ? )
+ *  GND   = GND
+ *  PB6  = CS
+ *  PA6   = SO
+ *  PA7   = SI
+ *  PA5   = SCK
+
+   
