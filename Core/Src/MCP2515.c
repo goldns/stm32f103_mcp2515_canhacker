@@ -14,39 +14,30 @@ static uint8_t SPI_Rx(void);
 static void SPI_RxBuffer(uint8_t *buffer, uint8_t length);
 
 /* MCP2515 ??? */
-bool MCP2515_Initialize(void)
-{
+
+bool MCP2515_Initialize(void){
     MCP2515_CS_HIGH();
-
     uint8_t loop = 10;
-
     do {
         /* SPI Ready ?? */
         if(HAL_SPI_GetState(SPI_CAN) == HAL_SPI_STATE_READY)
             return true;
-
         loop--;
     } while(loop > 0);
-
     return false;
 }
 
 /* MCP2515 ? ????? ?? */
-bool MCP2515_SetConfigMode(void)
-{
+bool MCP2515_SetConfigMode(void){
     /* CANCTRL Register Configuration ?? ?? */
     MCP2515_WriteByte(MCP2515_CANCTRL, 0x80);
-
     uint8_t loop = 10;
-
     do {
         /* ???? ?? */
         if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x80)
             return true;
-
         loop--;
     } while(loop > 0);
-
     return false;
 }
 

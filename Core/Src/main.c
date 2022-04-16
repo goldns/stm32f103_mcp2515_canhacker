@@ -60,6 +60,7 @@ static void MX_SPI1_Init(void);
 //==========================================================================
 //==========================================================================
 #include "CANSPI.h"
+#include "MCP2515.h"
 #include "stdio.h"
 #include "string.h"
 #define RX_UART_MAX_SIZE 32
@@ -80,8 +81,8 @@ char v_version[]="v0107\r\n";
 static const char CR2[] = "\r\n";
 static const char CR  = '\r';
 const char hex_asc_upper[] = "0123456789ABCDEF";
-
-
+int can_init=0;
+int speed = 3; //default speed 100kbit
 void my_error() {
     int iiii=5;
     while(1) {
@@ -97,23 +98,29 @@ void my_error() {
 
 int trans=0;
 void ParseRxUart() {
+	
     if(rx_uart_buffer[0]=='V') { // get version, first pkg   V
         HAL_UART_Transmit_IT(&huart1,(uint8_t*)V_version,strlen(V_version));
     }
     if(rx_uart_buffer[0]=='v') { // get version, first pkg   v
         HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
     }
+		if(rx_uart_buffer[0]=='C') { // close ?)
+			can_init=0;
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+    }
     if(rx_uart_buffer[0]=='S') { // Speed select!
+			can_init=0;
+			  sscanf((char*)rx_uart_buffer, "S%d", &speed);
         HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
     }
     if(rx_uart_buffer[0]=='O') { // Start Pkg
-        if(CANSPI_Initialize() != true ) {
-            my_error();
-        }
+				if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
+					my_error();
+				}
+				can_init=1;
         HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
     }
-
-
 
     if(rx_uart_buffer[0]=='D') {
         int new_delay=100;
@@ -141,8 +148,12 @@ void my_blink() {
 
 char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";
 void my_init() {
-    HAL_Delay(300); // need to init CAN!
-
+	  if(CANSPI_Initialize(speed) != true ) {
+			my_error();
+    }
+		can_init=1;
+    HAL_Delay(10); // need to init CAN!
+		
     HAL_UART_Transmit_IT(&huart1,(uint8_t*)str_init,strlen(str_init));
     HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
 }
@@ -207,11 +218,12 @@ void SendPkgToUart() {
 
 
 void my_loop() {
-    if(CANSPI_Receive(&rxMessage))
-    {
-        HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
-        SendPkgToUart();
-    }
+		if(can_init == 1){
+			if(CANSPI_Receive(&rxMessage)){
+				HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
+				SendPkgToUart();
+			}
+		}
     my_blink();
 }
 
@@ -251,9 +263,10 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_USART1_UART_Init();
-    MX_SPI1_Init();
+ 		MX_SPI1_Init();   
     /* USER CODE BEGIN 2 */
 
+		HAL_Delay(10);
     my_init();
     /* USER CODE END 2 */
 

@@ -26,9 +26,10 @@ void CANSPI_Sleep(void)
 }
 
 /* CAN ?? ???  */
-bool CANSPI_Initialize(void)
+bool CANSPI_Initialize(int speed)
 {
-    RXF0 RXF0reg;
+    MCP2515_Reset();
+		RXF0 RXF0reg;
     RXF1 RXF1reg;
     RXF2 RXF2reg;
     RXF3 RXF3reg;
@@ -101,32 +102,64 @@ bool CANSPI_Initialize(void)
     MCP2515_WriteByte(MCP2515_RXB0CTRL, 0x04);    //Enable BUKT, Accept Filter 0
     MCP2515_WriteByte(MCP2515_RXB1CTRL, 0x01);    //Accept Filter 1
 
-    /*
-    * tq = 2 * (brp(0) + 1) / 16000000 = 0.125us
-    * tq = 2 * (brp(0) + 1) / 8000000 = 0.250us   / my
+		switch (speed){
+			case 0: // 10Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x0F);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x87); 
+      break;
+			case 1: // 20Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x07);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x87); 
+      break;
 
-    * tbit = (SYNC_SEG(1 fixed) + PROP_SEG + PS1 + PS2)
-    * tbit = 1tq + 5tq + 6tq + 4tq = 16tq
-    * 16tq = 2us = 500kbps
-    */
+			case 2: // 50Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x03);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xB4);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x86);
+      break;
+			
+			case 3: // 100Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xB4);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x86); 
+      break;
 
-    /*
+			case 4: // 125Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xB1);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x85); 
+      break;
 
-    from arduino
-    #define MCP_8MHz_100kBPS_CFG1 (0x01)
-    #define MCP_8MHz_100kBPS_CFG2 (0xB4)
-    #define MCP_8MHz_100kBPS_CFG3 (0x86)
+			case 5: // 250Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xB1);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x85); 
+      break;
 
-    // default
-    MCP2515_WriteByte(MCP2515_CNF1, 0x00);
-    MCP2515_WriteByte(MCP2515_CNF2, 0xE5);
-    MCP2515_WriteByte(MCP2515_CNF3, 0x83);
-    */
+			case 6: // 500Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
+				MCP2515_WriteByte(MCP2515_CNF2, 0x90);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x82); 
+      break;
 
+			case 7: // 500Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
+				MCP2515_WriteByte(MCP2515_CNF2, 0x90);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x82); 
+      break;
 
-    MCP2515_WriteByte(MCP2515_CNF1, 0x01);
-    MCP2515_WriteByte(MCP2515_CNF2, 0xB4);
-    MCP2515_WriteByte(MCP2515_CNF3, 0x86);
+			case 8: // 1000Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
+				MCP2515_WriteByte(MCP2515_CNF2, 0x80);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x80); 
+      break;			
+
+			default:
+				return 1;
+		}
+
 
     /* Normal ??? ?? */
     if(!MCP2515_SetNormalMode())
