@@ -67,7 +67,6 @@ static void MX_SPI1_Init(void);
 #define RX_UART_MAX_SIZE 32
 
 uint8_t rx_uart_buffer[RX_UART_MAX_SIZE]= {0};
-uint8_t rx_uart_buffer_2send[RX_UART_MAX_SIZE]= {0};
 
 const char hex_asc_upper[] = "0123456789ABCDEF";
 
@@ -78,10 +77,10 @@ uint32_t BlinkDelay=300;
 uint32_t last_blink=0;
 
 // can
-#define TX_BUF_LEN 8
+
 uCAN_MSG rxMessage;
-uCAN_MSG txMessage[TX_BUF_LEN];
-int need_send=0; // id_max_send
+uCAN_MSG txMessage;
+int need_send=0;
 
 
 
@@ -93,7 +92,7 @@ static const char CR  = '\r';
 
 int can_init=0;
 int speed = 3; //default speed 100kbit
- 
+
 
 
 void my_error() {
@@ -113,96 +112,100 @@ void my_error() {
 
 
 // in loop check if need send frame
-uint8_t dlc=0;
-uint32_t frame_id=0;
 
-void if_need_send(){
+void NeedSendFrame() {
+    uint8_t dlc=0;
+    uint32_t frame_id=0;
 
-	int id_send=need_send;
-	int offset = 1;
-	
-	int idChars = 3;
-  for (int i=0; i<idChars; i++) {
-		frame_id <<= 4;
-    frame_id += hexCharToByte(rx_uart_buffer[offset++]);
-  }
-	
-	dlc=hexCharToByte(rx_uart_buffer[offset++]);
-	txMessage[id_send].frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;  //dSTANDARD_CAN_MSG_ID_2_0B
-	txMessage[id_send].frame.dlc =dlc;
-	txMessage[id_send].frame.id=frame_id;
-	if(dlc > 8) return;
-	if(dlc < 1) return;
+    int offset = 1;
 
-	
-	for (int i=0; i<dlc; i++) {
-		char hiHex = rx_uart_buffer[offset++];
-    char loHex = rx_uart_buffer[offset++];
-    txMessage[id_send].frame.data[i] = hexCharToByte(loHex) + (hexCharToByte(hiHex) << 4);
-  }
-	
-	
-	CANSPI_Transmit(&txMessage[id_send]);
-	need_send--;
-	
+    int idChars = 3;
+    for (int i=0; i<idChars; i++) {
+        frame_id <<= 4;
+        frame_id += hexCharToByte(rx_uart_buffer[offset++]);
+    }
+
+    dlc=hexCharToByte(rx_uart_buffer[offset++]);
+    if(dlc > 8) return;
+    if(dlc < 1) return;
+
+
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;  //dSTANDARD_CAN_MSG_ID_2_0B
+    txMessage.frame.id=frame_id;
+    txMessage.frame.dlc =dlc;
+
+    for (int i=0; i<dlc; i++) {
+        char hiHex = rx_uart_buffer[offset++];
+        char loHex = rx_uart_buffer[offset++];
+        txMessage.frame.data[i] = hexCharToByte(loHex) + (hexCharToByte(hiHex) << 4);
+    }
+
+    need_send=0;
+    CANSPI_Transmit(&txMessage);
+
+
 }
 
 void ParseRxUart() {
-	switch (rx_uart_buffer[0]){
-			
-		case 'V':	
-      HAL_UART_Transmit_IT(&huart1,(uint8_t*)V_version,strlen(V_version));
-		break;
-		
-    case 'v':	
-      HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
-		break;
-		
-		case 'C':
-			can_init=0;
-      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-		break;
-		
-    case 'S':
-			can_init=0;
-			sscanf((char*)rx_uart_buffer, "S%d", &speed);
-      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-		break;
-		
-    case 'O':
-      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-			if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
-					my_error();
-			}
-			can_init=1;
-		break;
-// t05180102030405060708
-		case 't':
-			if(need_send == TX_BUF_LEN){return;}
-			need_send++;
-			HAL_UART_Transmit(&huart1,(uint8_t*)CR2,strlen(CR2),500);
-		break;
-		
-		case 'T':
-			HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-		break;
+    switch (rx_uart_buffer[0]) {
 
-/*		case 'D':        // test input, delay blink ;)))))))))))))))))
-        int new_delay=100;
-        sscanf((char*)rx_uart_buffer, "D%d", &new_delay);
-        BlinkDelay=new_delay;
-		break;
-*/
-		default:
-				return;
-	}
-	return;
+    case 'V':
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)V_version,strlen(V_version));
+        break;
+
+    case 'v':
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
+        break;
+
+    case 'C':
+        can_init=0;
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+        break;
+    case 'Z':
+        can_init=0;
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+        break;
+    case 'S':
+        can_init=0;
+        sscanf((char*)rx_uart_buffer, "S%d", &speed);
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+        break;
+
+    case 'O':
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+        if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
+            my_error();
+        }
+        can_init=1;
+        break;
+// t05180102030405060708
+    case 't':
+        if(need_send == 1) {
+            return;
+        }
+        need_send=1;
+        break;
+
+    case 'T':
+        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+        break;
+
+    /*		case 'D':        // test input, delay blink ;)))))))))))))))))
+            int new_delay=100;
+            sscanf((char*)rx_uart_buffer, "D%d", &new_delay);
+            BlinkDelay=new_delay;
+    		break;
+    */
+    default:
+        return;
+    }
+    return;
 }
 
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if(huart->Instance == USART1) {
-			//rx_uart_current_size=Size;
+        //rx_uart_current_size=Size;
         ParseRxUart();
         HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
     }
@@ -211,7 +214,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
 void my_blink() {
     if(HAL_GetTick() > (last_blink+BlinkDelay)) {
-				//CANSPI_Transmit(&txMessage);
+        //CANSPI_Transmit(&txMessage);
         HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
         last_blink=HAL_GetTick();
     }
@@ -219,13 +222,13 @@ void my_blink() {
 
 
 void my_init() {
-	  if(CANSPI_Initialize(speed) != true ) {
-			my_error();
+    if(CANSPI_Initialize(speed) != true ) {
+        my_error();
     }
-		can_init=1;
+    can_init=1;
     HAL_Delay(10); // need to init CAN!
-		
-	
+
+
     HAL_UART_Transmit_IT(&huart1,(uint8_t*)str_init,strlen(str_init));
     HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
 }
@@ -253,7 +256,7 @@ void SendPkgToUart() {
     int _timestampEnabled=1;
     int len=rxMessage.frame.dlc;
     int offset=0;
-		//return;
+    //return;
     int isRTR = (rxMessage.frame.id & CAN_RTR_FLAG) ? 1 : 0;
     if (rxMessage.frame.id & CAN_ERR_FLAG) {
         return;
@@ -293,14 +296,16 @@ void SendPkgToUart() {
 
 
 void my_loop() {
-		if(can_init == 1){
-			if(CANSPI_Receive(&rxMessage)){
-				HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
-				SendPkgToUart();
-			}
-			
-			if(need_send > 0){ if_need_send();}
-		}
+    if(can_init == 1) {
+        if(CANSPI_Receive(&rxMessage)) {
+            HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
+            SendPkgToUart();
+        }
+
+        if(need_send > 0 ) {
+            NeedSendFrame();
+        }
+    }
     my_blink();
 }
 
@@ -340,10 +345,10 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_USART1_UART_Init();
- 		MX_SPI1_Init();   
+    MX_SPI1_Init();
     /* USER CODE BEGIN 2 */
 
-		HAL_Delay(10);
+    HAL_Delay(10);
     my_init();
     /* USER CODE END 2 */
 

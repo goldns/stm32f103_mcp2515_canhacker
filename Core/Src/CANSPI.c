@@ -119,68 +119,61 @@ bool CANSPI_Initialize(int speed)
 			case 0: // 10Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x0F);
 				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x87); 
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07); 
       break;
 			case 1: // 20Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x07);
 				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x87); 
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07); 
       break;
 
 			case 2: // 50Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x03);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xB4);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x86);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xAC);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07);
       break;
-			
-			
-			
 			
 			case 3: // 100Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x02); 
+				MCP2515_WriteByte(MCP2515_CNF2, 0xAC);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07); 
       break;
 
-			
-			
-			
-/*			case 4: // 125Kbps
-				MCP2515_WriteByte(MCP2515_CNF1, 0xC1);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xAC);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x85); 
+			case 4: // 125Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
+				MCP2515_WriteByte(MCP2515_CNF2, 0x9A);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07); 
       break;
-*/
+
 			case 5: // 250Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xB1);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x85); 
+				MCP2515_WriteByte(MCP2515_CNF2, 0x9A);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x07); 
       break;
 
 			case 6: // 500Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
-				MCP2515_WriteByte(MCP2515_CNF2, 0x90);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x82); 
+				MCP2515_WriteByte(MCP2515_CNF2, 0x88);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x03); 
       break;
 
-			case 7: // 500Kbps
+			case 7: // 800Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
-				MCP2515_WriteByte(MCP2515_CNF2, 0x90);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x82); 
+				MCP2515_WriteByte(MCP2515_CNF2, 0x80);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x01); 
       break;
 
+			/*   not work on 8MHz quartz
 			case 8: // 1000Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
 				MCP2515_WriteByte(MCP2515_CNF2, 0x80);
 				MCP2515_WriteByte(MCP2515_CNF3, 0x80); 
       break;			
-
+			*/
 			default:
 				return 1;
 		}
 
-
-    /* Normal ??? ?? */
     if(!MCP2515_SetNormalMode())
         return false;
 
