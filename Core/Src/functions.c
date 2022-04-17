@@ -34,15 +34,3 @@ uint8_t nibble2ascii(uint8_t nibble) {
 }
 
 
-//// calc pkg
-void put_hex_byte(char *buf, uint8_t byte) {
-    buf[0] = hex_asc_upper_hi(byte);
-    buf[1] = hex_asc_upper_lo(byte);
-}
-void _put_id(char *buf, int end_offset, uint16_t id) {
-    while (end_offset >= 0) {
-        buf[end_offset--] = hex_asc_upper[id & 0xF];
-        id >>= 4;
-    }
-}
-
