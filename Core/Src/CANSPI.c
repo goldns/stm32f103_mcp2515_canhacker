@@ -102,6 +102,19 @@ bool CANSPI_Initialize(int speed)
     MCP2515_WriteByte(MCP2515_RXB0CTRL, 0x04);    //Enable BUKT, Accept Filter 0
     MCP2515_WriteByte(MCP2515_RXB1CTRL, 0x01);    //Accept Filter 1
 
+		  /* 
+  * tq = 2 * (brp + 1) / fosc
+  * fosc = 8 000 000 = 8 MHz (shield clock)
+  * brp = 0
+  * tq = 2 * (0 + 1) / 8 000 000 = 0.25 us
+	
+	* tbit = (SYNC_SEG + PROP_SEG + PS1 + PS2)
+  * tbit =    1tq    +   3tq    + 1tq + 3tq   = 8tq
+  * 8tq = 2us = 500kbps
+	
+	https://www.kvaser.com/support/calculators/bit-timing-calculator/
+  */
+
 		switch (speed){
 			case 0: // 10Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x0F);
@@ -120,18 +133,24 @@ bool CANSPI_Initialize(int speed)
 				MCP2515_WriteByte(MCP2515_CNF3, 0x86);
       break;
 			
+			
+			
+			
 			case 3: // 100Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xB4);
-				MCP2515_WriteByte(MCP2515_CNF3, 0x86); 
+				MCP2515_WriteByte(MCP2515_CNF2, 0xBF);
+				MCP2515_WriteByte(MCP2515_CNF3, 0x02); 
       break;
 
-			case 4: // 125Kbps
-				MCP2515_WriteByte(MCP2515_CNF1, 0x01);
-				MCP2515_WriteByte(MCP2515_CNF2, 0xB1);
+			
+			
+			
+/*			case 4: // 125Kbps
+				MCP2515_WriteByte(MCP2515_CNF1, 0xC1);
+				MCP2515_WriteByte(MCP2515_CNF2, 0xAC);
 				MCP2515_WriteByte(MCP2515_CNF3, 0x85); 
       break;
-
+*/
 			case 5: // 250Kbps
 				MCP2515_WriteByte(MCP2515_CNF1, 0x00);
 				MCP2515_WriteByte(MCP2515_CNF2, 0xB1);
@@ -168,55 +187,49 @@ bool CANSPI_Initialize(int speed)
     return true;
 }
 
-/* CAN ??? ?? */
 uint8_t CANSPI_Transmit(uCAN_MSG *tempCanMsg)
 {
-    uint8_t returnValue = 0;
+   uint8_t returnValue = 0;
 
-    idReg.tempSIDH = 0;
-    idReg.tempSIDL = 0;
-    idReg.tempEID8 = 0;
-    idReg.tempEID0 = 0;
+   idReg.tempSIDH = 0;
+   idReg.tempSIDL = 0;
+   idReg.tempEID8 = 0;
+   idReg.tempEID0 = 0;
 
-    ctrlStatus.ctrl_status = MCP2515_ReadStatus();
+   ctrlStatus.ctrl_status = MCP2515_ReadStatus();
 
-    /* ?? Transmission ? Pending ?? ?? ??? ??? ????. */
-    if (ctrlStatus.TXB0REQ != 1)
-    {
-        /* ID Type? ?? ?? */
-        convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
+   if (ctrlStatus.TXB0REQ ==0)
+   {
+      convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
-        /* Tx Buffer? ??? ??? Loading */
-        MCP2515_LoadTxSequence(MCP2515_LOAD_TXB0SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
+      MCP2515_LoadTxSequence(MCP2515_LOAD_TXB0SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
+      MCP2515_RequestToSend(MCP2515_RTS_TX0);
 
-        /* Tx Buffer? ??? ???? */
-        MCP2515_RequestToSend(MCP2515_RTS_TX0);
+      returnValue = 1;
+   }
+   else if (ctrlStatus.TXB1REQ ==0)
+   {
+      convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
-        returnValue = 1;
-    }
-    else if (ctrlStatus.TXB1REQ != 1)
-    {
-        convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
+      MCP2515_LoadTxSequence(MCP2515_LOAD_TXB1SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
+      MCP2515_RequestToSend(MCP2515_RTS_TX1);
 
-        MCP2515_LoadTxSequence(MCP2515_LOAD_TXB1SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
-        MCP2515_RequestToSend(MCP2515_RTS_TX1);
+      returnValue = 1;
+   }
+   else if (ctrlStatus.TXB2REQ ==0)
+   {
+      convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
-        returnValue = 1;
-    }
-    else if (ctrlStatus.TXB2REQ != 1)
-    {
-        convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
+      MCP2515_LoadTxSequence(MCP2515_LOAD_TXB2SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
+      MCP2515_RequestToSend(MCP2515_RTS_TX2);
 
-        MCP2515_LoadTxSequence(MCP2515_LOAD_TXB2SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data[0]));
-        MCP2515_RequestToSend(MCP2515_RTS_TX2);
+      returnValue = 1;
+   }
 
-        returnValue = 1;
-    }
-
-    return (returnValue);
+   return (returnValue);
 }
 
-/* CAN ??? ?? */
+
 uint8_t CANSPI_Receive(uCAN_MSG *tempCanMsg)
 {
     uint8_t returnValue = 0;
@@ -225,31 +238,29 @@ uint8_t CANSPI_Receive(uCAN_MSG *tempCanMsg)
 
     rxStatus.ctrl_rx_status = MCP2515_GetRxStatus();
 
-    /* ??? ??? ???? ??? ?? */
-    if (rxStatus.rxBuffer != 0)
-    {
-        /* ?? ??? ???? ??? ?? ? ?? */
-        if ((rxStatus.rxBuffer == MSG_IN_RXB0)|(rxStatus.rxBuffer == MSG_IN_BOTH_BUFFERS))
-        {
+   //check to see if we received a CAN message
+   if (rxStatus.rxBuffer != 0)
+   {
+      //check which buffer the CAN message is in
+      if ((rxStatus.rxBuffer == MSG_IN_RXB0)|(rxStatus.rxBuffer == MSG_IN_BOTH_BUFFERS))
+      {
             MCP2515_ReadRxSequence(MCP2515_READ_RXB0SIDH, rxReg.rx_reg_array, sizeof(rxReg.rx_reg_array));
-        }
-        else if (rxStatus.rxBuffer == MSG_IN_RXB1)
-        {
+      }
+      else if (rxStatus.rxBuffer == MSG_IN_RXB1)
+      {
             MCP2515_ReadRxSequence(MCP2515_READ_RXB1SIDH, rxReg.rx_reg_array, sizeof(rxReg.rx_reg_array));
-        }
+      }
 
-        /* Extended ?? */
-        if (rxStatus.msgType == dEXTENDED_CAN_MSG_ID_2_0B)
-        {
-            tempCanMsg->frame.idType = (uint8_t) dEXTENDED_CAN_MSG_ID_2_0B;
-            tempCanMsg->frame.id = convertReg2ExtendedCANid(rxReg.RXBnEID8, rxReg.RXBnEID0, rxReg.RXBnSIDH, rxReg.RXBnSIDL);
-        }
-        else
-        {
-            /* Standard ?? */
-            tempCanMsg->frame.idType = (uint8_t) dSTANDARD_CAN_MSG_ID_2_0B;
-            tempCanMsg->frame.id = convertReg2StandardCANid(rxReg.RXBnSIDH, rxReg.RXBnSIDL);
-        }
+      if (rxStatus.msgType == dEXTENDED_CAN_MSG_ID_2_0B)
+      {
+         tempCanMsg->frame.idType = (uint8_t) dEXTENDED_CAN_MSG_ID_2_0B;
+         tempCanMsg->frame.id = convertReg2ExtendedCANid(rxReg.RXBnEID8, rxReg.RXBnEID0, rxReg.RXBnSIDH, rxReg.RXBnSIDL);
+      }
+      else
+      {
+         tempCanMsg->frame.idType = (uint8_t) dSTANDARD_CAN_MSG_ID_2_0B;
+         tempCanMsg->frame.id = convertReg2StandardCANid(rxReg.RXBnSIDH, rxReg.RXBnSIDL);
+      }
 
         tempCanMsg->frame.dlc   = rxReg.RXBnDLC;
         tempCanMsg->frame.data[0] = rxReg.RXBnD0;
@@ -267,7 +278,7 @@ uint8_t CANSPI_Receive(uCAN_MSG *tempCanMsg)
     return (returnValue);
 }
 
-/* ?? ??? ???? ??? ?? */
+
 uint8_t CANSPI_messagesInBuffer(void)
 {
     uint8_t messageCount = 0;
@@ -287,7 +298,7 @@ uint8_t CANSPI_messagesInBuffer(void)
     return (messageCount);
 }
 
-/* CAN BUS ? Offline ?? ?? */
+
 uint8_t CANSPI_isBussOff(void)
 {
     uint8_t returnValue = 0;
@@ -302,104 +313,100 @@ uint8_t CANSPI_isBussOff(void)
     return (returnValue);
 }
 
-/* Rx Passive Error ???? ?? */
 uint8_t CANSPI_isRxErrorPassive(void)
 {
-    uint8_t returnValue = 0;
+   uint8_t returnValue = 0;
 
-    errorStatus.error_flag_reg = MCP2515_ReadByte(MCP2515_EFLG);
+   errorStatus.error_flag_reg = MCP2515_ReadByte(MCP2515_EFLG);
 
-    if(errorStatus.RXEP == 1)
-    {
-        returnValue = 1;
-    }
+   if(errorStatus.RXEP == 1)
+   {
+      returnValue = 1;
+   }
 
-    return (returnValue);
+   return (returnValue);
 }
 
-/* Tx Passive Error ???? ?? */
+
 uint8_t CANSPI_isTxErrorPassive(void)
 {
     uint8_t returnValue = 0;
-
     errorStatus.error_flag_reg = MCP2515_ReadByte(MCP2515_EFLG);
-
     if(errorStatus.TXEP == 1)
     {
         returnValue = 1;
     }
-
     return (returnValue);
 }
 
-/* Register ???? Extended ID ???? ???? ?? ?? */
-static uint32_t convertReg2ExtendedCANid(uint8_t tempRXBn_EIDH, uint8_t tempRXBn_EIDL, uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL)
+uint32_t convertReg2ExtendedCANid(uint8_t tempRXBn_EIDH, uint8_t tempRXBn_EIDL, uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL)
 {
-    uint32_t returnValue = 0;
-    uint32_t ConvertedID = 0;
-    uint8_t CAN_standardLo_ID_lo2bits;
-    uint8_t CAN_standardLo_ID_hi3bits;
+   uint32_t returnValue = 0;
+   uint32_t ConvertedID = 0;
+   uint8_t CAN_standardLo_ID_lo2bits;
+   uint8_t CAN_standardLo_ID_hi3bits;
 
-    CAN_standardLo_ID_lo2bits = (tempRXBn_SIDL & 0x03);
-    CAN_standardLo_ID_hi3bits = (tempRXBn_SIDL >> 5);
-    ConvertedID = (tempRXBn_SIDH << 3);
-    ConvertedID = ConvertedID + CAN_standardLo_ID_hi3bits;
-    ConvertedID = (ConvertedID << 2);
-    ConvertedID = ConvertedID + CAN_standardLo_ID_lo2bits;
-    ConvertedID = (ConvertedID << 8);
-    ConvertedID = ConvertedID + tempRXBn_EIDH;
-    ConvertedID = (ConvertedID << 8);
-    ConvertedID = ConvertedID + tempRXBn_EIDL;
-    returnValue = ConvertedID;
-    return (returnValue);
+   CAN_standardLo_ID_lo2bits = (tempRXBn_SIDL & 0x03);
+   CAN_standardLo_ID_hi3bits = (tempRXBn_SIDL >> 5);
+   ConvertedID = (tempRXBn_SIDH << 3);
+   ConvertedID = ConvertedID + CAN_standardLo_ID_hi3bits;
+   ConvertedID = (ConvertedID << 2);
+   ConvertedID = ConvertedID + CAN_standardLo_ID_lo2bits;
+   ConvertedID = (ConvertedID << 8);
+   ConvertedID = ConvertedID + tempRXBn_EIDH;
+   ConvertedID = (ConvertedID << 8);
+   ConvertedID = ConvertedID + tempRXBn_EIDL;
+   returnValue = ConvertedID;
+   return (returnValue);
 }
 
-/* Register ???? Standard ID ???? ???? ?? ?? */
-static uint32_t convertReg2StandardCANid(uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL)
+uint32_t convertReg2StandardCANid(uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL)
 {
-    uint32_t returnValue = 0;
-    uint32_t ConvertedID;
+   uint32_t returnValue = 0;
+   uint32_t ConvertedID;
 
-    ConvertedID = (tempRXBn_SIDH << 3);
-    ConvertedID = ConvertedID + (tempRXBn_SIDL >> 5);
-    returnValue = ConvertedID;
+   ConvertedID = (tempRXBn_SIDH << 3);
+   ConvertedID = ConvertedID + (tempRXBn_SIDL >> 5);
+   returnValue = ConvertedID;
 
-    return (returnValue);
+   return (returnValue);
 }
 
-/* CAN ID? Register? ???? ?? ?? ?? */
-static void convertCANid2Reg(uint32_t tempPassedInID, uint8_t canIdType, id_reg_t *passedIdReg)
+
+void convertCANid2Reg(uint32_t tempPassedInID, uint8_t canIdType, id_reg_t *passedIdReg)
 {
-    uint8_t wipSIDL = 0;
+   uint8_t wipSIDL = 0;
 
-    if (canIdType == dEXTENDED_CAN_MSG_ID_2_0B)
-    {
-        //EID0
-        passedIdReg->tempEID0 = 0xFF & tempPassedInID;
-        tempPassedInID = tempPassedInID >> 8;
+   if (canIdType == dEXTENDED_CAN_MSG_ID_2_0B)
+   {
+      //EID0
+      passedIdReg->tempEID0 = 0xFF & tempPassedInID;
+      tempPassedInID = tempPassedInID >> 8;
 
-        //EID8
-        passedIdReg->tempEID8 = 0xFF & tempPassedInID;
-        tempPassedInID = tempPassedInID >> 8;
+      //EID8
+      passedIdReg->tempEID8 = 0xFF & tempPassedInID;
+      tempPassedInID = tempPassedInID >> 8;
 
-        //SIDL
-        wipSIDL = 0x03 & tempPassedInID;
-        tempPassedInID = tempPassedInID << 3;
-        wipSIDL = (0xE0 & tempPassedInID) + wipSIDL;
-        wipSIDL = wipSIDL + 0x08;
-        passedIdReg->tempSIDL = 0xEB & wipSIDL;
+      //SIDL
+      wipSIDL = 0x03 & tempPassedInID;
+      tempPassedInID = tempPassedInID << 3;
+      wipSIDL = (0xE0 & tempPassedInID) + wipSIDL;
+      wipSIDL = wipSIDL + 0x08;
+      passedIdReg->tempSIDL = 0xEB & wipSIDL;
 
-        //SIDH
-        tempPassedInID = tempPassedInID >> 8;
-        passedIdReg->tempSIDH = 0xFF & tempPassedInID;
-    }
-    else
-    {
-        passedIdReg->tempEID8 = 0;
-        passedIdReg->tempEID0 = 0;
-        tempPassedInID = tempPassedInID << 5;
-        passedIdReg->tempSIDL = 0xFF & tempPassedInID;
-        tempPassedInID = tempPassedInID >> 8;
-        passedIdReg->tempSIDH = 0xFF & tempPassedInID;
-    }
+      //SIDH
+      tempPassedInID = tempPassedInID >> 8;
+      passedIdReg->tempSIDH = 0xFF & tempPassedInID;
+   }
+   else
+   {
+      passedIdReg->tempEID8 = 0;
+      passedIdReg->tempEID0 = 0;
+      tempPassedInID = tempPassedInID << 5;
+      passedIdReg->tempSIDL = 0xFF & tempPassedInID;
+      tempPassedInID = tempPassedInID >> 8;
+      passedIdReg->tempSIDH = 0xFF & tempPassedInID;
+   }
 }
+
+

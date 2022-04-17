@@ -19,6 +19,10 @@ typedef union {
 #define dSTANDARD_CAN_MSG_ID_2_0B 1
 #define dEXTENDED_CAN_MSG_ID_2_0B 2
 
+#define hex_asc_upper_lo(x)    hex_asc_upper[((x) & 0x0F)]
+#define hex_asc_upper_hi(x)    hex_asc_upper[((x) & 0xF0) >> 4]
+
+
 bool CANSPI_Initialize(int speed);
 void CANSPI_Sleep(void);
 uint8_t CANSPI_Transmit(uCAN_MSG *tempCanMsg);
@@ -30,8 +34,7 @@ uint8_t CANSPI_isTxErrorPassive(void);
 
 
 
-#define hex_asc_upper_lo(x)    hex_asc_upper[((x) & 0x0F)]
-#define hex_asc_upper_hi(x)    hex_asc_upper[((x) & 0xF0) >> 4]
+
 #define put_sff_id(buf, id) _put_id(buf, 2, id)
 #define put_eff_id(buf, id) _put_id(buf, 7, id)
 

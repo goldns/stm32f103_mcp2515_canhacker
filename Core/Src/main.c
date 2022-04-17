@@ -63,26 +63,37 @@ static void MX_SPI1_Init(void);
 #include "MCP2515.h"
 #include "stdio.h"
 #include "string.h"
+#include "functions.h"
 #define RX_UART_MAX_SIZE 32
 uint8_t rx_uart_buffer[RX_UART_MAX_SIZE]= {0};
-uint16_t rx_uart_current_size=0;
+uint8_t rx_uart_buffer_2send[RX_UART_MAX_SIZE]= {0};
 
+const char hex_asc_upper[] = "0123456789ABCDEF";
+
+uint16_t rx_uart_current_size=0;
+char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";  // compilate date/time
 // blink settings
 uint32_t BlinkDelay=300;
 uint32_t last_blink=0;
 
 // can
-uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
+uCAN_MSG txMessage;
+
+
+
 
 // canhacker
 char V_version[]="V1010\r\n";
 char v_version[]="v0107\r\n";
 static const char CR2[] = "\r\n";
 static const char CR  = '\r';
-const char hex_asc_upper[] = "0123456789ABCDEF";
+
 int can_init=0;
 int speed = 3; //default speed 100kbit
+int need_send=0;  
+
+
 void my_error() {
     int iiii=5;
     while(1) {
@@ -96,43 +107,102 @@ void my_error() {
 }
 
 
-int trans=0;
-void ParseRxUart() {
-	
-    if(rx_uart_buffer[0]=='V') { // get version, first pkg   V
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)V_version,strlen(V_version));
-    }
-    if(rx_uart_buffer[0]=='v') { // get version, first pkg   v
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
-    }
-		if(rx_uart_buffer[0]=='C') { // close ?)
-			can_init=0;
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-    }
-    if(rx_uart_buffer[0]=='S') { // Speed select!
-			can_init=0;
-			  sscanf((char*)rx_uart_buffer, "S%d", &speed);
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-    }
-    if(rx_uart_buffer[0]=='O') { // Start Pkg
-				if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
-					my_error();
-				}
-				can_init=1;
-        HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
-    }
 
-    if(rx_uart_buffer[0]=='D') {
+
+
+// in loop check if need send frame
+void if_need_send(){
+	if(need_send == 0){return;}
+
+	int dlc=0;	
+txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+txMessage.frame.id = 0x0000;
+txMessage.frame.dlc = 8;
+txMessage.frame.data[0] = 0x00;
+txMessage.frame.data[1] = 0x00;
+txMessage.frame.data[2] = 0x00;
+txMessage.frame.data[3] = 0x00;
+txMessage.frame.data[4] = 0x00;
+txMessage.frame.data[5] = 0x00;
+txMessage.frame.data[6] = 0x00;
+txMessage.frame.data[7] = 0x00;
+
+
+	//t 051 8 0102030405060708
+	sscanf((char*)rx_uart_buffer, "t%3X%1X", &txMessage.frame.id, &dlc);
+	if(dlc > 8) return;
+	if(dlc < 1) return;
+
+	txMessage.frame.dlc = dlc;
+	int offset=5;
+	for (int i=0; i<dlc; i++) {
+		char hiHex = rx_uart_buffer[offset++];
+    char loHex = rx_uart_buffer[offset++];
+    txMessage.frame.data[i] = hexCharToByte(loHex) + (hexCharToByte(hiHex) << 4);
+  }
+	
+	
+	CANSPI_Transmit(&txMessage);
+	need_send=0;
+	
+}
+
+
+void ParseRxUart() {
+	switch (rx_uart_buffer[0]){
+			
+		case 'V':	
+      HAL_UART_Transmit_IT(&huart1,(uint8_t*)V_version,strlen(V_version));
+		break;
+		
+    case 'v':	
+      HAL_UART_Transmit_IT(&huart1,(uint8_t*)v_version,strlen(v_version));
+		break;
+		
+		case 'C':
+			can_init=0;
+      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+		break;
+		
+    case 'S':
+			can_init=0;
+			sscanf((char*)rx_uart_buffer, "S%d", &speed);
+      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+		break;
+		
+    case 'O':
+      HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+			if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
+					my_error();
+			}
+			can_init=1;
+		break;
+// t05180102030405060708
+		case 't':
+			need_send=1;
+			HAL_UART_Transmit(&huart1,(uint8_t*)CR2,strlen(CR2),500);
+		break;
+		
+		case 'T':
+			HAL_UART_Transmit_IT(&huart1,(uint8_t*)CR2,strlen(CR2));
+		break;
+
+/*		case 'D':        // test input, delay blink ;)))))))))))))))))
         int new_delay=100;
         sscanf((char*)rx_uart_buffer, "D%d", &new_delay);
         BlinkDelay=new_delay;
-    }
+		break;
+*/
+		default:
+				return;
+	}
+	return;
 }
 
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if(huart->Instance == USART1) {
-        rx_uart_current_size=Size;
+			//rx_uart_current_size=Size;
         ParseRxUart();
         HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
     }
@@ -141,12 +211,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
 void my_blink() {
     if(HAL_GetTick() > (last_blink+BlinkDelay)) {
+				//CANSPI_Transmit(&txMessage);
         HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
         last_blink=HAL_GetTick();
     }
 }
 
-char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";
+
 void my_init() {
 	  if(CANSPI_Initialize(speed) != true ) {
 			my_error();
@@ -154,22 +225,24 @@ void my_init() {
 		can_init=1;
     HAL_Delay(10); // need to init CAN!
 		
+txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;  //dSTANDARD_CAN_MSG_ID_2_0B
+txMessage.frame.id = 0x0030;
+txMessage.frame.dlc = 8;
+txMessage.frame.data[0] = 0x00;
+txMessage.frame.data[1] = 0x00;
+txMessage.frame.data[2] = 0x00;
+txMessage.frame.data[3] = 0x00;
+txMessage.frame.data[4] = 0x00;
+txMessage.frame.data[5] = 0x00;
+txMessage.frame.data[6] = 0x00;
+txMessage.frame.data[7] = 0x00;
+		
     HAL_UART_Transmit_IT(&huart1,(uint8_t*)str_init,strlen(str_init));
     HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
 }
 
 
-//// calc pkg
-static inline void put_hex_byte(char *buf, uint8_t byte) {
-    buf[0] = hex_asc_upper_hi(byte);
-    buf[1] = hex_asc_upper_lo(byte);
-}
-static inline void _put_id(char *buf, int end_offset, uint16_t id) {
-    while (end_offset >= 0) {
-        buf[end_offset--] = hex_asc_upper[id & 0xF];
-        id >>= 4;
-    }
-}
+
 
 
 char PkgBuff[26]= {0}; //standart pkg   len 25+\r =26
@@ -223,6 +296,7 @@ void my_loop() {
 				HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
 				SendPkgToUart();
 			}
+			if_need_send();
 		}
     my_blink();
 }

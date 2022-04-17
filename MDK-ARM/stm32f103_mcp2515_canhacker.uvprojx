@@ -409,14 +409,19 @@
               <FilePath>../Core/Src/stm32f1xx_hal_msp.c</FilePath>
             </File>
             <File>
+              <FileName>MCP2515.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\MCP2515.c</FilePath>
+            </File>
+            <File>
               <FileName>CANSPI.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\CANSPI.c</FilePath>
             </File>
             <File>
-              <FileName>MCP2515.c</FileName>
+              <FileName>functions.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Core\Src\MCP2515.c</FilePath>
+              <FilePath>..\Core\Src\functions.c</FilePath>
             </File>
           </Files>
         </Group>
