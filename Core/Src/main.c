@@ -64,14 +64,17 @@ static void MX_SPI1_Init(void);
 #include "stdio.h"
 #include "string.h"
 #include "functions.h"
-#define RX_UART_MAX_SIZE 32
-uint8_t rx_uart_buffer[RX_UART_MAX_SIZE]= {0};
+
 const char hex_asc_upper[] = "0123456789ABCDEF";
+char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";  // compilate date/time
+
 // usb recive buffer
-uint8_t usb_rx_buffer[RX_UART_MAX_SIZE]={0};
+#define RX_MAX_SIZE 32
+uint8_t usb_rx_buffer[RX_MAX_SIZE]={0};
 int usb_rx_buffer_len=0;
 
-char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";  // compilate date/time
+
+
 // blink settings
 uint32_t BlinkDelay=300;
 uint32_t last_blink=0;
@@ -104,9 +107,7 @@ void my_error() {
     }
 }
 
-void DebugToSerial(uint8_t* str,int timeout){
-		//HAL_UART_Transmit_IT(&huart1,(uint8_t*)str,strlen((char*)str));
-}
+
 void TransmitToSerial(uint8_t* str,int timeout){
 	CDC_Transmit_FS((unsigned char*)str, strlen((char*)str));
 }
@@ -119,10 +120,8 @@ void clear_rx_buff(){
 	}
 }
 
-// in loop check if need send frame
-
 void NeedSendFrame() {
-    uint8_t dlc=0;
+		uint8_t dlc=0;
     uint32_t frame_id=0;
     int offset = 1;
     int idChars = 3;
@@ -181,25 +180,13 @@ void ParseRxCommand() {
         need_send=1;
         break;
     case 'T':
-				TransmitToSerial((uint8_t*)CR2,0);
+				//TransmitToSerial((uint8_t*)CR2,0);
         break;
     default:
         return;
     }
-		
     return;
-		
 }
-
-
-/*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-    if(huart->Instance == USART1) {
-        //ParseRxCommand();
-        HAL_UARTEx_ReceiveToIdle_IT(&huart1,rx_uart_buffer,RX_UART_MAX_SIZE);
-    }
-}
-*/
-
 
 void my_blink() {
     if(HAL_GetTick() > (last_blink+BlinkDelay)) {
@@ -207,7 +194,6 @@ void my_blink() {
         last_blink=HAL_GetTick();
     }
 }
-
 
 void my_init() {
 	if(CANSPI_Initialize(speed) != true ) {
@@ -290,10 +276,9 @@ void my_loop() {
             NeedSendFrame();
         }
     }
-		if(usb_rx_buffer_len > 0){
+		if(usb_rx_buffer_len != 0){
 			HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
 			ParseRxCommand();
-			
 			usb_rx_buffer_len=0;
 		}
     my_blink();
@@ -337,7 +322,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-    HAL_Delay(10);
+    HAL_Delay(50);
     my_init();
   /* USER CODE END 2 */
 
