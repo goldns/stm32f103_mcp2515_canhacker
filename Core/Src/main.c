@@ -69,10 +69,10 @@ const char hex_asc_upper[] = "0123456789ABCDEF";
 char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";  // compilate date/time
 
 // usb recive buffer
-#define RX_MAX_SIZE 64
-uint8_t usb_rx_buffer[RX_MAX_SIZE]= {0};
+#define RX_MAX_SIZE 32
+uint8_t usb_rx_buffer[RX_MAX_SIZE]= {0};  //
 int usb_rx_buffer_len=0;
-
+char PkgBuff[RX_MAX_SIZE]= {0}; // Send2Uart buffer
 
 
 // blink settings
@@ -82,7 +82,7 @@ uint32_t last_blink=0;
 uCAN_MSG rxMessage;
 uCAN_MSG txMessage;
 int need_send=0;
-
+bool __loopback__=1;
 
 // canhacker
 char V_version[]="V1010\r\n";
@@ -93,7 +93,14 @@ static const char CR  = '\r';
 int can_init=0;
 int speed = 3; //default speed 100kbit
 
+/*
+from canhacker
+t12380102030405060708
+T1234567880102030405060708
+r1230
+R123456780
 
+*/
 
 void my_error() {
     int iiii=5;
@@ -142,6 +149,7 @@ void NeedSendFrame() {
     int offset = 1;
     uint32_t frame_id=0;
     int idChars = isExended ? 8 : 3;
+
     for (int i=0; i<idChars; i++) {
         frame_id <<= 4;
         frame_id += hexCharToByte(usb_rx_buffer[offset++]);
@@ -151,8 +159,11 @@ void NeedSendFrame() {
     }
     if (isExended) {
         frame_id |= CAN_EFF_FLAG;
-    }
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+				txMessage.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    }else{
+				txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+		}
+    //
     txMessage.frame.id=frame_id;
     uint8_t dlc = hexCharToByte(usb_rx_buffer[offset++]);
     if(dlc > 8) return;
@@ -251,7 +262,6 @@ static inline void _put_id(char *buf, int end_offset, uint16_t id) {
     }
 }
 
-char PkgBuff[64]= {0}; //standart pkg   len 25+\r =26
 void SendPkgToUart() {
     if(rxMessage.frame.dlc == 0) return;
     if(rxMessage.frame.dlc > 8) return;

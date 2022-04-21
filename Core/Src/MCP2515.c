@@ -27,13 +27,12 @@ bool MCP2515_Initialize(void) {
     return false;
 }
 
-/* MCP2515 ? ????? ?? */
+/* MCP2515 */
 bool MCP2515_SetConfigMode(void) {
-    /* CANCTRL Register Configuration ?? ?? */
+
     MCP2515_WriteByte(MCP2515_CANCTRL, 0x80);
     uint8_t loop = 10;
     do {
-        /* ???? ?? */
         if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x80)
             return true;
         loop--;
@@ -41,55 +40,51 @@ bool MCP2515_SetConfigMode(void) {
     return false;
 }
 
-/* MCP2515 ? Normal??? ?? */
+bool MCP2515_StartLoopback(){
+    MCP2515_WriteByte(MCP2515_CANCTRL, 0x40);
+    uint8_t loop = 10;
+    do {
+        if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x40)
+            return true;
+        loop--;
+    } while(loop > 0);
+    return false;
+}
+
+
 bool MCP2515_SetNormalMode(void)
 {
-    /* CANCTRL Register Normal ?? ?? */
     MCP2515_WriteByte(MCP2515_CANCTRL, 0x00);
-
     uint8_t loop = 10;
-
     do {
-        /* ???? ?? */
         if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x00)
             return true;
-
         loop--;
     } while(loop > 0);
-
     return false;
 }
 
-/* MCP2515 ? Sleep ??? ?? */
+
 bool MCP2515_SetSleepMode(void)
 {
-    /* CANCTRL Register Sleep ?? ?? */
     MCP2515_WriteByte(MCP2515_CANCTRL, 0x20);
-
     uint8_t loop = 10;
-
     do {
-        /* ???? ?? */
         if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x20)
             return true;
-
         loop--;
     } while(loop > 0);
-
     return false;
 }
 
-/* MCP2515 SPI-Reset */
+
 void MCP2515_Reset(void)
 {
     MCP2515_CS_LOW();
-
     SPI_Tx(MCP2515_RESET);
-
     MCP2515_CS_HIGH();
 }
 
-/* 1??? ?? */
 
 uint8_t MCP2515_ReadByte (uint8_t address)
 {
@@ -128,6 +123,9 @@ void MCP2515_WriteByte(uint8_t address, uint8_t data)
 
     MCP2515_CS_HIGH();
 }
+
+
+
 
 /* Sequential Bytes ?? */
 void MCP2515_WriteByteSequence(uint8_t startAddress, uint8_t endAddress, uint8_t *data)

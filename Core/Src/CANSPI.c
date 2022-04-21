@@ -10,7 +10,7 @@ static void convertCANid2Reg(uint32_t tempPassedInID, uint8_t canIdType, id_reg_
 ctrl_status_t ctrlStatus;
 ctrl_error_status_t errorStatus;
 id_reg_t idReg;
-
+extern bool __loopback__;
 /** CAN SPI APIs */
 
 /* Sleep ?? ?? */
@@ -29,7 +29,7 @@ void CANSPI_Sleep(void)
 bool CANSPI_Initialize(int speed)
 {
     MCP2515_Reset();
-		HAL_Delay(20);
+    HAL_Delay(20);
     RXF0 RXF0reg;
     RXF1 RXF1reg;
     RXF2 RXF2reg;
@@ -85,9 +85,13 @@ bool CANSPI_Initialize(int speed)
     if(!MCP2515_Initialize())
         return false;
 
-    /* Configuration */
     if(!MCP2515_SetConfigMode())
         return false;
+
+
+
+
+
 
     /* Filter & Mask */
     MCP2515_WriteByteSequence(MCP2515_RXM0SIDH, MCP2515_RXM0EID0, &(RXM0reg.RXM0SIDH));
@@ -178,6 +182,10 @@ bool CANSPI_Initialize(int speed)
     if(!MCP2515_SetNormalMode())
         return false;
 
+    if(__loopback__) {
+        if(!MCP2515_StartLoopback())
+            return false;
+    }
     return true;
 }
 
