@@ -29,6 +29,7 @@ void CANSPI_Sleep(void)
 bool CANSPI_Initialize(int speed)
 {
     MCP2515_Reset();
+		HAL_Delay(20);
     RXF0 RXF0reg;
     RXF1 RXF1reg;
     RXF2 RXF2reg;
@@ -80,15 +81,15 @@ bool CANSPI_Initialize(int speed)
     RXF5reg.RXF5EID8 = 0x00;
     RXF5reg.RXF5EID0 = 0x00;
 
-    /* MCP2515 ???, SPI ?? ?? ?? */
+    /* MCP2515 */
     if(!MCP2515_Initialize())
         return false;
 
-    /* Configuration ??? ?? */
+    /* Configuration */
     if(!MCP2515_SetConfigMode())
         return false;
 
-    /* Filter & Mask ? ?? */
+    /* Filter & Mask */
     MCP2515_WriteByteSequence(MCP2515_RXM0SIDH, MCP2515_RXM0EID0, &(RXM0reg.RXM0SIDH));
     MCP2515_WriteByteSequence(MCP2515_RXM1SIDH, MCP2515_RXM1EID0, &(RXM1reg.RXM1SIDH));
     MCP2515_WriteByteSequence(MCP2515_RXF0SIDH, MCP2515_RXF0EID0, &(RXF0reg.RXF0SIDH));

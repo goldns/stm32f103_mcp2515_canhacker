@@ -69,7 +69,7 @@ const char hex_asc_upper[] = "0123456789ABCDEF";
 char* str_init="INIT: "__DATE__"/"__TIME__"\r\n";  // compilate date/time
 
 // usb recive buffer
-#define RX_MAX_SIZE 32
+#define RX_MAX_SIZE 64
 uint8_t usb_rx_buffer[RX_MAX_SIZE]= {0};
 int usb_rx_buffer_len=0;
 
@@ -108,7 +108,7 @@ void my_error() {
 }
 
 
-void TransmitToSerial(uint8_t* str,int timeout) {
+void TransmitToSerial(uint8_t* str) {
     CDC_Transmit_FS((unsigned char*)str, strlen((char*)str));
 }
 
@@ -177,26 +177,26 @@ void NeedSendFrame() {
 void ParseRxCommand() {
     switch (usb_rx_buffer[0]) {
     case 'V':
-        TransmitToSerial((uint8_t*)V_version,0);
+        TransmitToSerial((uint8_t*)V_version);
         break;
     case 'v':
-        TransmitToSerial((uint8_t*)v_version,0);
+        TransmitToSerial((uint8_t*)v_version);
         break;
     case 'C':
         can_init=0;
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         break;
     case 'Z':
         can_init=0;
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         break;
     case 'S':
         can_init=0;
         sscanf((char*)usb_rx_buffer, "S%d", &speed);
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         break;
     case 'O':
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
             my_error();
         }
@@ -209,13 +209,13 @@ void ParseRxCommand() {
         need_send=1;
         break;
     case 'm':
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         break;
     case 'M':
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
         break;
     default: // default
-        TransmitToSerial((uint8_t*)CR2,0);
+        TransmitToSerial((uint8_t*)CR2);
     }
     return;
 }
@@ -233,7 +233,7 @@ void my_init() {
     }
     can_init=1;
     HAL_Delay(50); // need to init CAN!
-    TransmitToSerial((uint8_t*)str_init,0);
+    TransmitToSerial((uint8_t*)str_init);
 }
 
 
@@ -251,7 +251,7 @@ static inline void _put_id(char *buf, int end_offset, uint16_t id) {
     }
 }
 
-char PkgBuff[30]= {0}; //standart pkg   len 25+\r =26
+char PkgBuff[64]= {0}; //standart pkg   len 25+\r =26
 void SendPkgToUart() {
     if(rxMessage.frame.dlc == 0) return;
     if(rxMessage.frame.dlc > 8) return;
@@ -287,7 +287,7 @@ void SendPkgToUart() {
     }
     PkgBuff[offset++] = CR;
     PkgBuff[offset] = '\0';
-    TransmitToSerial((uint8_t*)PkgBuff,5000);
+    TransmitToSerial((uint8_t*)PkgBuff);
     return;
 }
 
