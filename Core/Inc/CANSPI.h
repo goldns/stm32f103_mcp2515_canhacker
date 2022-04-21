@@ -6,13 +6,13 @@
 
 
 typedef union {
-  struct {
-    uint8_t idType;
-    uint32_t id;
-    uint8_t dlc;
-    uint8_t data[8];
-  } frame;
-  uint8_t array[14];
+    struct {
+        uint8_t idType;
+        uint32_t id;
+        uint8_t dlc;
+        uint8_t data[8];
+    } frame;
+    uint8_t array[14];
 } uCAN_MSG;
 
 
