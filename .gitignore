@@ -75,8 +75,8 @@
 *.l2p
 *.iex
 
-*.c_orig
-*.h_orig
+*.orig
+
 
 
 # To explicitly override the above, define any exceptions here; e.g.:

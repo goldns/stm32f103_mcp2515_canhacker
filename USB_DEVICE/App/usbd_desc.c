@@ -64,11 +64,11 @@
 
 #define USBD_VID     1155
 #define USBD_LANGID_STRING     1033
-#define USBD_MANUFACTURER_STRING     "Kam_CanHacker"
+#define USBD_MANUFACTURER_STRING     "stm32+mcp2515-CanHacker"
 #define USBD_PID_FS     22336
-#define USBD_PRODUCT_STRING_FS     "Kam_CanHacker COM"
-#define USBD_CONFIGURATION_STRING_FS     "CDC Config"
-#define USBD_INTERFACE_STRING_FS     "CDC Interface"
+#define USBD_PRODUCT_STRING_FS     "stm32+mcp2515-CanHacker"
+#define USBD_CONFIGURATION_STRING_FS     "stm32+mcp2515-CanHacker"
+#define USBD_INTERFACE_STRING_FS     "stm32+mcp2515-CanHacker"
 
 /* USER CODE BEGIN PRIVATE_DEFINES */
 
