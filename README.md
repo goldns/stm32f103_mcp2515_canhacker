@@ -14,7 +14,7 @@ https://github.com/autowp/arduino-canhacker
  *  BOARD | MCP2515
  *  +3.3v = VCC      (via 5v = bug ? )
  *  GND   = GND
- *  PB6  = CS
+ *  PB13  = CS   - PIN LABEL = CAN_CS
  *  PA6   = SO
  *  PA7   = SI
  *  PA5   = SCK
