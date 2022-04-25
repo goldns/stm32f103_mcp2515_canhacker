@@ -82,13 +82,17 @@ uint32_t last_blink=0;
 uCAN_MSG rxMessage;
 uCAN_MSG txMessage;
 int need_send=0;
-bool __loopback__=1;
+bool __loopback__=0;
+
+
+
+
 
 // canhacker
-char V_version[]="V1010\r\n";
-char v_version[]="v0107\r\n";
+char V_version[]="V1010\r";
+char v_version[]="AT72HW30SW2\r";   // ID need to CAN-Analyzer ( https://www.elektronik-keller.de/index.php/stm32-can-support )
 static const char CR2[] = "\r\n";
-static const char CR  = '\r';
+static const char CR[]  = "\r\0";
 
 int can_init=0;
 int speed = 3; //default speed 100kbit
@@ -99,7 +103,6 @@ t12380102030405060708
 T1234567880102030405060708
 r1230
 R123456780
-
 */
 
 void my_error() {
@@ -128,6 +131,7 @@ void clear_rx_buff() {
 }
 
 void NeedSendFrame() {
+    need_send=0;
     int isExended = 0;
     int isRTR = 0;
     switch (usb_rx_buffer[0]) {
@@ -154,15 +158,12 @@ void NeedSendFrame() {
         frame_id <<= 4;
         frame_id += hexCharToByte(usb_rx_buffer[offset++]);
     }
-    if (isRTR) {
-        frame_id |= CAN_RTR_FLAG;
-    }
+
     if (isExended) {
-        frame_id |= CAN_EFF_FLAG;
-				txMessage.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
-    }else{
-				txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-		}
+        txMessage.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    } else {
+        txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    }
     //
     txMessage.frame.id=frame_id;
     uint8_t dlc = hexCharToByte(usb_rx_buffer[offset++]);
@@ -178,9 +179,9 @@ void NeedSendFrame() {
             txMessage.frame.data[i] = hexCharToByte(loHex) + (hexCharToByte(hiHex) << 4);
         }
     }
-    need_send=0;
+
     if(can_init == 1) {
-        CANSPI_Transmit(&txMessage);
+        while(CANSPI_Transmit(&txMessage) == 0);
     }
     clear_rx_buff();
 }
@@ -188,26 +189,28 @@ void NeedSendFrame() {
 void ParseRxCommand() {
     switch (usb_rx_buffer[0]) {
     case 'V':
-        TransmitToSerial((uint8_t*)V_version);
+				TransmitToSerial((uint8_t*)V_version);
         break;
     case 'v':
-        TransmitToSerial((uint8_t*)v_version);
+					if(usb_rx_buffer[1]=='Z') {TransmitToSerial((uint8_t*)CR2); return;}
+					if(usb_rx_buffer[1]=='C') {TransmitToSerial((uint8_t*)CR2); return;}
+					TransmitToSerial((uint8_t*)v_version);
         break;
     case 'C':
         can_init=0;
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         break;
     case 'Z':
         can_init=0;
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         break;
     case 'S':
         can_init=0;
         sscanf((char*)usb_rx_buffer, "S%d", &speed);
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         break;
     case 'O':
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         if(CANSPI_Initialize(speed) != true ) {   // default speed 3=100kbit
             my_error();
         }
@@ -219,14 +222,20 @@ void ParseRxCommand() {
     case 'T':
         need_send=1;
         break;
+    case 'r':
+        need_send=1;
+        break;
+    case 'R':
+        need_send=1;
+        break;
     case 'm':
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         break;
     case 'M':
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
         break;
     default: // default
-        TransmitToSerial((uint8_t*)CR2);
+        TransmitToSerial((uint8_t*)CR);
     }
     return;
 }
@@ -268,16 +277,16 @@ void SendPkgToUart() {
     int _timestampEnabled=1;
     int offset=0;
     int len=rxMessage.frame.dlc;
-    int isRTR = (rxMessage.frame.id & CAN_RTR_FLAG) ? 1 : 0;
-    if (rxMessage.frame.id & CAN_ERR_FLAG) {
-        return;
-    } else if (rxMessage.frame.id & CAN_EFF_FLAG) {
+    //int isRTR = (rxMessage.frame.id & CAN_RTR_FLAG) ? 1 : 0;
+    int isRTR=0;
+
+    if (rxMessage.frame.idType == dEXTENDED_CAN_MSG_ID_2_0B) {
         PkgBuff[0] = isRTR ? 'R' : 'T';
-        put_eff_id(PkgBuff+1, rxMessage.frame.id & CAN_EFF_MASK);
+        put_eff_id(PkgBuff+1, rxMessage.frame.id);  // notwork? from 0x12345678 => 0x00005678
         offset = 9;
     } else {
         PkgBuff[0] = isRTR ? 'r' : 't';
-        put_sff_id(PkgBuff+1, rxMessage.frame.id & CAN_SFF_MASK);
+        put_sff_id(PkgBuff+1, rxMessage.frame.id);
         offset = 4;
     }
     PkgBuff[offset++] = hex_asc_upper_lo(rxMessage.frame.dlc);
@@ -295,7 +304,7 @@ void SendPkgToUart() {
         put_hex_byte(PkgBuff + offset, ts);
         offset += 2;
     }
-    PkgBuff[offset++] = CR;
+    PkgBuff[offset++] = '\r';
     PkgBuff[offset] = '\0';
     TransmitToSerial((uint8_t*)PkgBuff);
     return;

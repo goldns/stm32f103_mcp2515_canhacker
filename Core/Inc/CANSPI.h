@@ -16,8 +16,8 @@ typedef union {
 } uCAN_MSG;
 
 
-#define dSTANDARD_CAN_MSG_ID_2_0B 1
-#define dEXTENDED_CAN_MSG_ID_2_0B 2
+#define dSTANDARD_CAN_MSG_ID_2_0B 0x01
+#define dEXTENDED_CAN_MSG_ID_2_0B 0x02
 
 #define hex_asc_upper_lo(x)    hex_asc_upper[((x) & 0x0F)]
 #define hex_asc_upper_hi(x)    hex_asc_upper[((x) & 0xF0) >> 4]

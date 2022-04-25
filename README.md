@@ -4,10 +4,15 @@ And MCP2515 over SPI
 For Keil
 
 
-Часть  кода и логики спизжена с других проектов
+Часть  кода и логики спизжена с других проектов:
+
 https://github.com/eziya/STM32_SPI_MCP2515
+
 https://github.com/autowp/arduino-canhacker
 
+Work with: 
+	CanHacker V2.00.02
+	CAN Analyzer ( https://www.elektronik-keller.de/index.php/stm32-can-support )
 
 
  *  PINouts:

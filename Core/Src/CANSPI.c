@@ -14,20 +14,17 @@ extern bool __loopback__;
 /** CAN SPI APIs */
 
 /* Sleep ?? ?? */
-void CANSPI_Sleep(void)
-{
+void CANSPI_Sleep(void){
     /* Clear CAN bus wakeup interrupt */
     MCP2515_BitModify(MCP2515_CANINTF, 0x40, 0x00);
-
     /* Enable CAN bus activity wakeup */
     MCP2515_BitModify(MCP2515_CANINTE, 0x40, 0x40);
-
     MCP2515_SetSleepMode();
 }
 
 /* CAN ?? ???  */
-bool CANSPI_Initialize(int speed)
-{
+bool CANSPI_Initialize(int speed){
+	
     MCP2515_Reset();
     HAL_Delay(20);
     RXF0 RXF0reg;
@@ -36,10 +33,11 @@ bool CANSPI_Initialize(int speed)
     RXF3 RXF3reg;
     RXF4 RXF4reg;
     RXF5 RXF5reg;
+	
     RXM0 RXM0reg;
     RXM1 RXM1reg;
 
-    /* Rx Mask values ??? */
+    /* Rx Mask values */
     RXM0reg.RXM0SIDH = 0x00;
     RXM0reg.RXM0SIDL = 0x00;
     RXM0reg.RXM0EID8 = 0x00;
@@ -50,7 +48,7 @@ bool CANSPI_Initialize(int speed)
     RXM1reg.RXM1EID8 = 0x00;
     RXM1reg.RXM1EID0 = 0x00;
 
-    /* Rx Filter values ??? */
+    /* Rx Filter values */
     RXF0reg.RXF0SIDH = 0x00;
     RXF0reg.RXF0SIDL = 0x00;      //Starndard Filter
     RXF0reg.RXF0EID8 = 0x00;
@@ -253,6 +251,7 @@ uint8_t CANSPI_Receive(uCAN_MSG *tempCanMsg)
             MCP2515_ReadRxSequence(MCP2515_READ_RXB1SIDH, rxReg.rx_reg_array, sizeof(rxReg.rx_reg_array));
         }
 
+				
         if (rxStatus.msgType == dEXTENDED_CAN_MSG_ID_2_0B)
         {
             tempCanMsg->frame.idType = (uint8_t) dEXTENDED_CAN_MSG_ID_2_0B;
@@ -359,7 +358,7 @@ uint32_t convertReg2ExtendedCANid(uint8_t tempRXBn_EIDH, uint8_t tempRXBn_EIDL, 
     ConvertedID = (ConvertedID << 8);
     ConvertedID = ConvertedID + tempRXBn_EIDL;
     returnValue = ConvertedID;
-    return (returnValue);
+		return returnValue;
 }
 
 uint32_t convertReg2StandardCANid(uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL)
