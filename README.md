@@ -11,9 +11,12 @@ https://github.com/eziya/STM32_SPI_MCP2515
 https://github.com/autowp/arduino-canhacker
 
 Work with: 
+
 	CanHacker V2.00.02
+	
 	CAN Analyzer ( https://www.elektronik-keller.de/index.php/stm32-can-support )
 
+	CANcool ( https://github.com/MHS-Elektronik/CANcool )
 
  *  PINouts:
  *  BOARD | MCP2515
