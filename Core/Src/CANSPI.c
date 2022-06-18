@@ -177,13 +177,13 @@ bool CANSPI_Initialize(int speed){
         return 1;
     }
 
-    if(!MCP2515_SetNormalMode())
-        return false;
-
     if(__loopback__) {
         if(!MCP2515_StartLoopback())
             return false;
-    }
+    }else{
+				if(!MCP2515_SetNormalMode())
+        return false;
+		}
     return true;
 }
 
