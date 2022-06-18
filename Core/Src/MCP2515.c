@@ -54,7 +54,7 @@ bool MCP2515_StartLoopback(){
 
 bool MCP2515_SetNormalMode(void)
 {
-    MCP2515_WriteByte(MCP2515_CANCTRL, 0x00);
+    MCP2515_WriteByte(MCP2515_CANCTRL, 0x08);  // 0x00 = normal with AUTO_RETRANSMIT(!), 0x08 = disable auto retransmit
     uint8_t loop = 10;
     do {
         if((MCP2515_ReadByte(MCP2515_CANSTAT) & 0xE0) == 0x00)
